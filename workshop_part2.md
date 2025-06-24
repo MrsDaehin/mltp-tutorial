@@ -149,53 +149,6 @@ Choosing the right metric type is essential for effective monitoring and queryin
 | Histogram   | Aggregated quantiles, distributions     | Exact per-instance quantiles               |
 
 ---
-```## When to Use Each Metric Type
-
-Choosing the right metric type is essential for effective monitoring and querying in Prometheus. Here’s a practical guide:
-
----
-
-### **Counters**
-- **Use when:** You want to track a value that only ever increases (except for resets on restart).
-- **Examples:** Total HTTP requests, total errors, total bytes sent.
-- **Best for:** Rates, totals, and alerting on increases over time.
-- **Do not use for:** Values that can decrease (e.g., current memory usage).
-
----
-
-### **Gauges**
-- **Use when:** You want to track a value that can go up and down.
-- **Examples:** Current memory usage, temperature, number of active connections, queue length.
-- **Best for:** Current state, resource utilization, and values that fluctuate.
-- **Do not use for:** Cumulative totals or strictly increasing values.
-
----
-
-### **Summaries**
-- **Use when:** You need quantiles (e.g., median, 99th percentile) of observed values, calculated on the client side.
-- **Examples:** Request latency percentiles, response size percentiles.
-- **Best for:** Per-instance quantile calculations.
-- **Do not use for:** Aggregating quantiles across multiple instances or labels (not possible with summaries).
-
----
-
-### **Histograms**
-- **Use when:** You want to observe the distribution of values and need to aggregate quantiles across instances or labels.
-- **Examples:** Request latency distributions, response size distributions.
-- **Best for:** Calculating quantiles (using `histogram_quantile()`), aggregating across multiple dimensions, and tracking distributions.
-- **Do not use for:** Exact quantile calculation per instance (use summaries if you need client-side quantiles).
-
----
-
-**Summary Table**
-
-| Metric Type | Use For                                 | Avoid For                                  |
-|-------------|-----------------------------------------|--------------------------------------------|
-| Counter     | Totals, rates, ever-increasing values   | Values that can decrease                   |
-| Gauge       | Current state, fluctuating values       | Cumulative totals                          |
-| Summary     | Per-instance quantiles                  | Aggregated quantiles across instances      |
-| Histogram   | Aggregated quantiles, distributions     | Exact per-
----
 
 ## Inspecting Metrics Endpoints
 
