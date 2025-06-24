@@ -1,5 +1,6 @@
 const tracingUtils = require('./tracing')('requester', 'mythical-requester');
 const Pyroscope = require('@pyroscope/nodejs');
+const { expressMiddleware } = require('@pyroscope/nodejs');
 const axios = require('axios');
 const { uniqueNamesGenerator, names, colors, animals } = require('unique-names-generator');
 const logUtils = require('./logging')('mythical-requester', 'requester');
@@ -33,13 +34,9 @@ app.get('/metrics', async (req, res) => {
 
 // Initialise the Pyroscope library to send pprof data.
 Pyroscope.init({
-    serverAddress: `http://${process.env.PROFILE_COLLECTOR_HOST}:${process.env.PROFILE_COLLECTOR_PORT}`,
-    appName: 'mythical-requester',
-    tags: {
-        namespace: `${process.env.NAMESPACE ?? 'mythical'}`
-    },
+    appName: 'mythical-beasts-requester',
 });
-Pyroscope.start();
+app.use(expressMiddleware());
 
 // We just keep going, requesting names and adding them
 const makeRequest = async (tracingObj, sendMessage, logEntry) => {

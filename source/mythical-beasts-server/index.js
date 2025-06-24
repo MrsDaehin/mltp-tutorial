@@ -1,5 +1,6 @@
 const traceUtils = require('./tracing')('server', 'mythical-server');
 const Pyroscope = require('@pyroscope/nodejs');
+const { expressMiddleware } = require('@pyroscope/nodejs');
 const logUtils = require('./logging')('mythical-server', 'server');
 
 (async () => {
@@ -19,13 +20,7 @@ const logUtils = require('./logging')('mythical-server', 'server');
     register.setContentType(promClient.Registry.OPENMETRICS_CONTENT_TYPE);
 
     // Database full teardown timeout
-    let teardownTimeoutValue = 24 * 60 * 60 * 1000; // Default is every 24 hours (86400000)
-    if (process.env.MYTHICAL_SERVER_DATABASE_TEARDOWN_TIMEOUT) {
-        if (Number(process.env.MYTHICAL_SERVER_DATABASE_TEARDOWN_TIMEOUT) > 1 && Number(process.env.MYTHICAL_SERVER_DATABASE_TEARDOWN_TIMEOUT) <= 86400000) {
-            teardownTimeoutValue = Number(process.env.MYTHICAL_SERVER_DATABASE_TEARDOWN_TIMEOUT)
-        }
-    }
-    const teardownTimeout = teardownTimeoutValue
+    const teardownTimeout = 24 * 60 * 60 * 1000; // Default is every 24 hours
     let teardownInProgress = false;
 
     // Use JSON parsing in the request body
@@ -119,13 +114,9 @@ const logUtils = require('./logging')('mythical-server', 'server');
 
     // Initialise the Pyroscope library to send pprof data.
     Pyroscope.init({
-        serverAddress: `http://${process.env.PROFILE_COLLECTOR_HOST}:${process.env.PROFILE_COLLECTOR_PORT}`,
-        appName: 'mythical-server',
-        tags: {
-            namespace: `${process.env.NAMESPACE ?? 'mythical'}`
-        },
+        appName: 'mythical-beasts-server',
     });
-    Pyroscope.start();
+    app.use(expressMiddleware());
 
     // Generic GET endpoint
     app.get('/:endpoint', async (req, res) => {
@@ -432,7 +423,6 @@ const logUtils = require('./logging')('mythical-server', 'server');
     // Create the DB and connect to it
     const startServer = async () => {
         const requestSpan = tracer.startSpan('server');
-
         // Create a new context for this request
         await api.context.with(api.trace.setSpan(api.context.active(), requestSpan), async () => {
             try {
@@ -443,10 +433,10 @@ const logUtils = require('./logging')('mythical-server', 'server');
                     message: 'Installing postgres client...',
                 });
                 pgClient = new Client({
-                    host: process.env.MYTHICAL_DATABASE_HOST ?? 'mythical-database',
-                    port: Number(process.env.MYTHICAL_DATABASE_HOST_PORT) ?? 5432,
-                    user: process.env.MYTHICAL_DATABASE_USER ?? 'postgres',
-                    password: process.env.MYTHICAL_DATABASE_PASSWORD ?? 'mythical',
+                    host: 'mythical-database',
+                    port: 5432,
+                    user: 'postgres',
+                    password: 'mythical',
                 });
 
                 await pgClient.connect();
