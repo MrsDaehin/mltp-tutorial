@@ -3,6 +3,206 @@
 This workshop is based on the [PromLabs PromQL Cheat Sheet](https://promlabs.com/promql-cheat-sheet/). Each section below introduces a PromQL concept or function, provides a brief explanation, and includes practical examples.
 
 ---
+# PromQL Metric Types Overview
+
+Prometheus instrumentation client libraries allow you to instrument your services with four different metric types, which offer different API methods for recording values.
+
+---
+
+## Metric Types
+
+A quick summary of metric types:
+
+- **Counters** track values that can only ever go up, like HTTP request counts or CPU seconds used.
+- **Gauges** track values that can go up or down, like temperatures or disk space.
+- **Summaries** calculate client-side-calculated quantiles from a set of observations, like request latency percentiles. They also track the total count and total sum of observations.
+- **Histograms** track bucketed histograms of a set of observations like request latencies. They also track the total count and total sum of observations.
+
+> **Note:** Histogram and Summary metrics can both be used for calculating quantiles, but have different trade-offs. The most important one is that Summary metrics cannot be aggregated over dimensions or multiple instances. See the Prometheus documentation for more information.
+
+---
+
+## Metric Types Meaning and Serialization
+
+Let's have a brief look at the meaning of each metric type and when you would use it:
+
+### Counters
+
+Counters are for tracking cumulative totals over time, like the total number of HTTP requests that have been handled so far, the total number of seconds spent handling requests, or the number of errors that have occurred. Counters may only decrease in value when the process that exposes them restarts, in which case their last value is forgotten and thus gets reset to 0.
+
+**Example serialization:**
+```
+# HELP http_requests_total The total number of HTTP requests.
+# TYPE http_requests_total counter
+http_requests_total{method="post",code="200"} 1027
+http_requests_total{method="post",code="400"}    3
+```
+
+---
+
+### Gauges
+
+Gauges are for tracking current tallies, or things that can naturally go up or down over time, like memory usage, a queue length, the number of in-flight requests, or a temperature.
+
+**Example serialization:**
+```
+# HELP process_open_fds Number of open file descriptors.
+# TYPE process_open_fds gauge
+process_open_fds 15
+```
+
+---
+
+### Summaries
+
+Summaries allow you to track the distribution of a set of observed values (most commonly request latencies) as a set of quantiles. A quantile is the same as a percentile, but is indicated from 0 to 1 instead of 0 to 100, so:
+
+- Quantile 0.5 is the 50th percentile
+- Quantile 0.99 is the 99th percentile
+- ...and so on.
+
+A summary metric without any further instrumentation labels (but a few configured output quantiles) would get serialized like this in the exposition format, with the quantile label indicating the quantile:
+
+```
+# HELP rpc_duration_seconds A summary of RPC durations in seconds.
+# TYPE rpc_duration_seconds summary
+rpc_duration_seconds{quantile="0.01"} 3.102
+rpc_duration_seconds{quantile="0.05"} 3.272
+rpc_duration_seconds{quantile="0.5"} 4.773
+rpc_duration_seconds{quantile="0.9"} 9.001
+rpc_duration_seconds{quantile="0.99"} 76.656
+rpc_duration_seconds_sum 5.7560473e+04
+rpc_duration_seconds_count 2693
+```
+
+> **NOTE:** Besides tracking value distributions in buckets or quantiles, histogram and summary metrics also track the total count and the total sum of observations as a by-product:
+>
+> - `<basename>_sum` tracks the total sum of all observed values. In a request latency histogram, this represents the total number of seconds spent handling requests since process start.
+> - `<basename>_count` tracks the total count of all observed values. In a request latency histogram, this represents the total number of requests handled so far.
+>
+> Often you will be interested in tracking these counts anyway, especially for calculating request rates from the `<basename>_count` metric. If you already have a histogram or summary metric that tracks your request latencies, this means that you don't need to create separate counter metrics for tracking these counts anymore.
+
+---
+
+### Histograms
+
+Histograms allow you to track the distribution of a set of observed values (most commonly request latencies) across a set of buckets. They also track the total number of observed values, as well as the cumulative sum of the observed values.
+
+A histogram metric without any further instrumentation labels would get serialized as a list of counter series (one per bucket), with an `le` label indicating the latency upper bound of each bucket counter:
+
+```
+# HELP http_request_duration_seconds A histogram of the request duration.
+# TYPE http_request_duration_seconds histogram
+http_request_duration_seconds_bucket{le="0.025"} 20
+http_request_duration_seconds_bucket{le="0.05"} 60
+http_request_duration_seconds_bucket{le="0.1"} 90
+http_request_duration_seconds_bucket{le="0.25"} 100
+http_request_duration_seconds_bucket{le="+Inf"} 105
+http_request_duration_seconds_sum 21.322
+http_request_duration_seconds_count 105
+```
+## When to Use Each Metric Type
+
+Choosing the right metric type is essential for effective monitoring and querying in Prometheus. Here’s a practical guide:
+
+---
+
+### **Counters**
+- **Use when:** You want to track a value that only ever increases (except for resets on restart).
+- **Examples:** Total HTTP requests, total errors, total bytes sent.
+- **Best for:** Rates, totals, and alerting on increases over time.
+- **Do not use for:** Values that can decrease (e.g., current memory usage).
+
+---
+
+### **Gauges**
+- **Use when:** You want to track a value that can go up and down.
+- **Examples:** Current memory usage, temperature, number of active connections, queue length.
+- **Best for:** Current state, resource utilization, and values that fluctuate.
+- **Do not use for:** Cumulative totals or strictly increasing values.
+
+---
+
+### **Summaries**
+- **Use when:** You need quantiles (e.g., median, 99th percentile) of observed values, calculated on the client side.
+- **Examples:** Request latency percentiles, response size percentiles.
+- **Best for:** Per-instance quantile calculations.
+- **Do not use for:** Aggregating quantiles across multiple instances or labels (not possible with summaries).
+
+---
+
+### **Histograms**
+- **Use when:** You want to observe the distribution of values and need to aggregate quantiles across instances or labels.
+- **Examples:** Request latency distributions, response size distributions.
+- **Best for:** Calculating quantiles (using `histogram_quantile()`), aggregating across multiple dimensions, and tracking distributions.
+- **Do not use for:** Exact quantile calculation per instance (use summaries if you need client-side quantiles).
+
+---
+
+**Summary Table**
+
+| Metric Type | Use For                                 | Avoid For                                  |
+|-------------|-----------------------------------------|--------------------------------------------|
+| Counter     | Totals, rates, ever-increasing values   | Values that can decrease                   |
+| Gauge       | Current state, fluctuating values       | Cumulative totals                          |
+| Summary     | Per-instance quantiles                  | Aggregated quantiles across instances      |
+| Histogram   | Aggregated quantiles, distributions     | Exact per-instance quantiles               |
+
+---
+```## When to Use Each Metric Type
+
+Choosing the right metric type is essential for effective monitoring and querying in Prometheus. Here’s a practical guide:
+
+---
+
+### **Counters**
+- **Use when:** You want to track a value that only ever increases (except for resets on restart).
+- **Examples:** Total HTTP requests, total errors, total bytes sent.
+- **Best for:** Rates, totals, and alerting on increases over time.
+- **Do not use for:** Values that can decrease (e.g., current memory usage).
+
+---
+
+### **Gauges**
+- **Use when:** You want to track a value that can go up and down.
+- **Examples:** Current memory usage, temperature, number of active connections, queue length.
+- **Best for:** Current state, resource utilization, and values that fluctuate.
+- **Do not use for:** Cumulative totals or strictly increasing values.
+
+---
+
+### **Summaries**
+- **Use when:** You need quantiles (e.g., median, 99th percentile) of observed values, calculated on the client side.
+- **Examples:** Request latency percentiles, response size percentiles.
+- **Best for:** Per-instance quantile calculations.
+- **Do not use for:** Aggregating quantiles across multiple instances or labels (not possible with summaries).
+
+---
+
+### **Histograms**
+- **Use when:** You want to observe the distribution of values and need to aggregate quantiles across instances or labels.
+- **Examples:** Request latency distributions, response size distributions.
+- **Best for:** Calculating quantiles (using `histogram_quantile()`), aggregating across multiple dimensions, and tracking distributions.
+- **Do not use for:** Exact quantile calculation per instance (use summaries if you need client-side quantiles).
+
+---
+
+**Summary Table**
+
+| Metric Type | Use For                                 | Avoid For                                  |
+|-------------|-----------------------------------------|--------------------------------------------|
+| Counter     | Totals, rates, ever-increasing values   | Values that can decrease                   |
+| Gauge       | Current state, fluctuating values       | Cumulative totals                          |
+| Summary     | Per-instance quantiles                  | Aggregated quantiles across instances      |
+| Histogram   | Aggregated quantiles, distributions     | Exact per-
+---
+
+## Inspecting Metrics Endpoints
+
+When you navigate to the `/metrics` endpoint of an instrumented service (like Prometheus itself) in a browser, you can inspect these metrics manually.
+
+For more details, see the [Prometheus exposition formats documentation](https://prometheus.io/docs/instrumenting/exposition_formats/)
+
 
 ## 1. **Selectors**
 
