@@ -401,3 +401,5 @@ Aggregation over time in PromQL uses functions that summarize or transform the v
 **Tip:**  
 - Over time functions always require a range vector selector (e.g., `[5m]`).
 - These functions operate on each time series independently.
+
+[Continue to Part 3: Advanced Patterns and Use Cases →](./workshop_part3.md)
