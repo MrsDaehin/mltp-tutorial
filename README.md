@@ -7,7 +7,6 @@ This readme has the following sections:
 - [Introduction to Metrics, Logs, Traces and Profiles in Grafana](#introduction-to-metrics-logs-traces-and-profiles-in-grafana)
   - [History](#history)
   - [Prerequisites](#prerequisites)
-  - [Quick Start](#quick-start)
   - [Overview](#overview)
   - [Running the Demonstration Environment](#running-the-demonstration-environment)
     - [Using Grafana Cloud for Observability (Optional)](#using-grafana-cloud-for-observability-optional)
@@ -46,28 +45,6 @@ You can also send data from the example microservice application to Grafana Clou
 The following demonstration environment requires:
 * [Docker](https://www.docker.com/products/docker-desktop/)
 * [Docker Compose (if not using a version of Docker that has it inbuilt)](https://docs.docker.com/compose/install/)
-
-## Quick Start
-
-1. Start the local Grafana stack with:
-```bash
-docker-compose -f docker-compose-local-grafana.yml up
-```
-
-2. Run the k6 load test with:
-```bash
-K6_PROMETHEUS_RW_SERVER_URL=http://localhost:9009/api/v1/push K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true k6 run --out experimental-prometheus-rw k6/mythical-test.js
-```
-
-This will:
-- Start Grafana, Mimir, and other required services
-- Send k6 metrics directly to Mimir on port 9009
-- Use native histograms for better metric visualization in Grafana
-
-You can then access:
-- Grafana at http://localhost:3000
-- View your k6 test results in real-time
-- Monitor API performance metrics
 
 ## Overview
 The demos from this series were based on the application and code in this repository, which includes:
@@ -205,9 +182,9 @@ The Pyroscope service is embedded in Grafana Alloy.
 
 Pyroscope scrape [pprof](https://github.com/google/pprof) based profiles from the Mythical microservices. It uses the [Pyroscope NodeJS](https://github.com/grafana/pyroscope-nodejs) bindings in source instrumentation.
 
-Samples are scraped directly from the application on the `/debug/pprof/profile` and `/debug/pprof/heap` endpoints.
+Samples are sent to Grafana Alloy, which receives all incoming profile samples and then writes them to the Pyroscope service.
 
-You can see an example of profiling in action once the system is running by using the Explorer to visualise the profiles stored [here](http://localhost:3000/explore?panes=%7B%22Cnw%22:%7B%22datasource%22:%22pyroscope%22,%22queries%22:%5B%7B%22groupBy%22:%5B%5D,%22labelSelector%22:%22%7Bservice_name%3D%5C%22mythical-server%5C%22%7D%22,%22queryType%22:%22both%22,%22refId%22:%22A%22,%22datasource%22:%7B%22type%22:%22grafana-pyroscope-datasource%22,%22uid%22:%22pyroscope%22%7D,%22profileTypeId%22:%22process_cpu:wall:microseconds:wall:microseconds%22%7D%5D,%22range%22:%7B%22from%22:%22now-6h%22,%22to%22:%22now%22%7D%7D%7D&schemaVersion=1&orgId=1).
+You can see an example of profiling in action once the system is running by using the Explorer to visualise the profiles stored [here](http://localhost:3000/a/grafana-pyroscope-app/explore?searchText=&panelType=time-series&layout=grid&hideNoData=off&explorationType=all&var-serviceName=mythical-server&var-profileMetricId=process_cpu:cpu:nanoseconds:cpu:nanoseconds&var-spanSelector=&var-dataSource=pyroscope&var-filters=&var-filtersBaseline=&var-filtersComparison=&var-groupBy=).
 
 ### k6
 
@@ -249,6 +226,7 @@ Grafana Alloy acts as:
 * A Prometheus scraping service and metric/label rewriter.
 * A Promtail (Loki logs receiver) service and processor.
 * A Tempo trace receiver and span processor.
+* A Pyroscope profile receiver and processor.
 * Remote writer for MLT data to Grafana Cloud (or any other compatible storage system).
 
 In this example environment, Grafana Alloy:
@@ -257,6 +235,7 @@ In this example environment, Grafana Alloy:
   * The Mimir service for operational monitoring.
   * The Loki service for operational monitoring.
   * The Tempo service for operatational monitoring.
+  * The Pyroscope service for profiling.
   * The Alloy itself, for operational monitoring.
   * The installed Node Exporter service.
 * Receives trace data, via trace configs, emitted by the microservice application.
@@ -280,7 +259,7 @@ Note that as Grafana Alloy scrapes metrics for every service defined in the [`do
 
 It should be noted that since [v1.4.0](https://github.com/grafana/tempo/blob/main/CHANGELOG.md#v140--2022-04-28), Tempo has included the ability to generate [RED (Rate, Error, Duration)](https://grafana.com/blog/2018/08/02/the-red-method-how-to-instrument-your-services/) [span](https://grafana.com/docs/tempo/latest/metrics-generator/span_metrics/) and [service graph](https://grafana.com/docs/tempo/latest/metrics-generator/service_graphs/) metrics.
 
-As such, the Grafana Alloy configuration now includes a commented section where those metrics used to be generated; this is now handled directly in Tempo via server-side metrics generation.
+As such, the Grafana Alloy configuration now includes a commented section where those metrics used to be generated; this is now handled directly in Tempo via server-side metrics generation.
 
 Whilst this is convenient for many users, you may prefer to generate metrics locally via Grafana Alloy rather than Tempo server-side. These include environments where tail-based sampling may be utilized to discard certain traces.
 
@@ -316,16 +295,17 @@ An example pipeline stage in Alloy to rewrite timestamps can be enabled by uncom
 
 ## "NoQL" Exploration
 
-From Grafana 11, Grafana Labs is introducing query-less experiences for exploring supported signals. This sandbox supports query-less metrics and logs investigations via the `Explore->Metrics` and `Explore->Logs` menu options.
-These apps allow you to use specify relevant data sources and then use the Grafana interface to drilldown into the relevant signals based on associated label and attributes. This allows a user to quickly find anomalous signals and determine their root cause without having to craft a relevant PromQL or LogQL query.
+From Grafana 11, Grafana Labs introduced query-less experiences for exploring supported signals. This sandbox supports query-less metrics, logs, traces and profile investigations via the `Explore-><Signal>` menu options.
 
-**Note:** Both Explore Metrics and Explore Logs are currently in public preview and may change before finally being made generally available.
+These apps allow you to use specify relevant data sources and then use the Grafana interface to drilldown into the relevant signals based on associated labels and attributes. This allows a user to quickly find anomalous signals and determine their root cause without having to craft a relevant PromQL, LogQL or TraceQL query.
+
+**Note:** Both Explore Traces and Explore Profiles are currently in public preview and may change before finally being made generally available.
 
 ## Grafana Cloud
 
 >**Note**: By default, as mentioned in the Grafana Alloy section, metrics, logs, traces and profiles are scraped by default from every service. If sending metrics to Grafana Cloud, check the number of signals (for example, for metrics, the number of [active series](https://grafana.com/docs/grafana-cloud/billing-and-usage/active-series-and-dpm/)) that you can store without additional cost.
 
-In the following configuration instructions, you can generate a general purpose `write` scope token that will work with metrics, logs and traces, but note that the profiling token is separate and needs to be generated specifically for Pyroscope.
+In the following configuration instructions, you can generate a general purpose `write`` scope token that will work with metrics, logs and traces, but note that the profiling token is separate and needs to be generated specifically for Pyroscope.
 
 This demo can be run against Grafana Cloud by configuring the `alloy/endpoints-cloud.json` file for each signal. This differs slightly for each of the signals.
 
