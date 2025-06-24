@@ -394,7 +394,13 @@ Gauges are metrics that can go up and down (e.g., memory usage, temperature). Pr
    ```promql
    idelta(node_memory_MemAvailable_bytes[2m])
    ```
+### **Comparison Table: Changes in Gauges**
 
+| Function    | Description                                                      | Example Usage                                 | Typical Use Case                        |
+|-------------|------------------------------------------------------------------|-----------------------------------------------|-----------------------------------------|
+| `delta()`   | Difference between first and last value in the range             | `delta(memory_usage_bytes[10m])`              | Net change over a period                |
+| `deriv()`   | Per-second rate of change (linear regression over the range)     | `deriv(memory_usage_bytes[5m])`               | Trend/speed of change over time         |
+| `idelta()`  | Difference between the last two samples in the range             | `idelta(memory_usage_bytes[5m])`              | Detecting sudden jumps or drops
 ---
 ## 6. Functions: Histogram Quantile
 
