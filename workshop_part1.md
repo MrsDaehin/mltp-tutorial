@@ -58,58 +58,12 @@ alertmanager:
 - **Web UI**: [http://localhost:9093](http://localhost:9093)
 
 ---
-
-## 3. PromQL Basics
-
-### 3.1. Instant Vector
-
-Query the latest value for a metric:
-
-```promql
-up
-```
-Shows if targets are up (1) or down (0).
-
-### 3.2. Range Vector
-
-Query values over a time range:
-
-```promql
-up[5m]
-```
-Shows the status of targets over the last 5 minutes.
-
-### 3.3. Filtering
-
-Filter by label:
-
-```promql
-http_requests_total{job="mythical-server"}
-```
-
----
-
-## 4. Aggregation Examples
-
-Sum all HTTP requests:
-
-```promql
-sum(http_requests_total)
-```
-
-Sum by job:
-
-```promql
-sum by (job) (http_requests_total)
-```
-
----
-
-## 5. Useful Links
+## 3. Useful Links
 
 - [Prometheus Querying Basics](https://prometheus.io/docs/prometheus/latest/querying/basics/)
 - [PromQL Cheat Sheet](https://promlabs.com/promql-cheat-sheet/)
 
 ---
+
 
 [Continue to Part 2: Advanced PromQL Workshop →](./workshop_part2.md)

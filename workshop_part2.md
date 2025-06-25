@@ -177,6 +177,94 @@ http_requests_total{job="api", status!="500"}
 ```
 Selects time series where `job` is "api" and `status` is not "500".
 
+### 1.4 **Selecting Series**
+
+Selecting series is the foundation of any PromQL query. You can select the latest sample, a range of samples, or filter series based on label values and regular expressions.
+
+#### Basic Series Selection
+
+  * **Select latest sample for series with a given metric name:**
+    ```promql
+    node_cpu_seconds_total
+    ```
+  * **Select 5-minute range of samples for series with a given metric name:**
+    ```promql
+    node_cpu_seconds_total[5m]
+    ```
+
+#### Filtering with Label Matchers
+
+You can refine your series selection by specifying label values.
+
+  * **Only series with given label values:**
+    ```promql
+    node_cpu_seconds_total{cpu="0",mode="idle"}
+    ```
+#### Filtering series by value
+
+You can filter time series based on their sample values using comparison operators. This allows you to keep only those series that meet certain value conditions, or to return a boolean result (0 or 1) for each series.
+
+**Common comparison operators:**
+
+| Operator | Description              |
+|----------|--------------------------|
+| `==`     | Equal to                 |
+| `!=`     | Not equal to             |
+| `>`      | Greater than             |
+| `<`      | Less than                |
+| `>=`     | Greater than or equal to |
+| `<=`     | Less than or equal to    |
+
+**Examples:**
+
+- **Keep only series with a value greater than a threshold:**
+  ```promql
+  node_filesystem_avail_bytes > 10*1024*1024
+  ```
+  > Returns only those series where available bytes are greater than 10 MB.
+
+- **Compare two metrics and keep only series where the left is greater than the right:**
+  ```promql
+  go_goroutines > go_threads
+  ```
+  > Returns only those series where `go_goroutines` is greater than `go_threads` for matching labels.
+
+- **Return 0 or 1 for each series using the `bool` modifier:**
+  ```promql
+  up == bool 0
+  ```
+  > Returns 1 for targets that are down, 0 otherwise.
+
+**Tip:**  
+Use value filtering to focus on series that are above or below thresholds, or to create binary series
+
+
+#### Complex Label Matchers
+
+PromQL provides several label matchers for more advanced filtering:
+
+| Operator | Description                               | Example                                    |
+| :------- | :---------------------------------------- | :----------------------------------------- |
+| `=`      | Equality                                  | `node_cpu_seconds_total{cpu="0"}`          |
+| `!=`     | Non-equality                              | `node_cpu_seconds_total{cpu!="0"}`         |
+| `=~`     | Regex match                               | `node_cpu_seconds_total{mode=~"user|system"}` |
+| `!~`     | Negative regex match                      | `node_cpu_seconds_total{mode!~"idle|iowait"}` |
+
+  * **Example with complex label matchers:**
+    ```promql
+    node_cpu_seconds_total{cpu!="0",mode=~"user|system"}
+    ```
+
+#### Offset Modifier
+
+The `offset` modifier allows you to shift the time for a query, useful for comparing current data with past data.
+
+  * **Select data from one day ago and shift it to the current time:**
+    ```promql
+    process_resident_memory_bytes offset 1d
+    ```
+
+
 ---
 
 ## 2. **Operators**
@@ -188,10 +276,33 @@ rate(http_requests_total[5m]) * 100
 Multiplies the per-second rate by 100.
 
 ### 2.2. **Comparison Operators**
-```promql
-up == 0
-```
-Returns 1 for targets that are down, 0 otherwise.
+You can filter series based on their sample values using comparison operators. These can also be used to return 0 or 1 for each compared series instead of filtering.
+
+| Operator | Description                          |
+| :------- | :----------------------------------- |
+| `==`     | Equal to                             |
+| `!=`     | Not equal to                         |
+| `>`      | Greater than                         |
+| `<`      | Less than                            |
+| `>=`     | Greater than or equal to             |
+| `<=`     | Less than or equal to                |
+
+  * **Only keep series with a sample value greater than a given number:**
+
+    ```promql
+    node_filesystem_avail_bytes > 10*1024*1024
+    ```
+
+  * **Only keep series from the left-hand side whose sample values are larger than their right-hand-side matches:**
+
+    ```promql
+    go_goroutines > go_threads
+    ```
+
+  * **Instead of filtering, return 0 or 1 for each compared series:**
+
+    ```promql
+    go_goroutines > bool go_threads
 
 ### 2.3. **Boolean Modifier**
 ```promql
