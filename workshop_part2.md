@@ -243,10 +243,10 @@ Use value filtering to focus on series that are above or below thresholds, or to
 
 PromQL provides several label matchers for more advanced filtering:
 
-| Operator | Description                               | Example                                    |
-| :------- | :---------------------------------------- | :----------------------------------------- |
-| `=`      | Equality                                  | `node_cpu_seconds_total{cpu="0"}`          |
-| `!=`     | Non-equality                              | `node_cpu_seconds_total{cpu!="0"}`         |
+| Operator | Description                               | Example                                       |
+| :------- | :---------------------------------------- | :-------------------------------------------- |
+| `=`      | Equality                                  | `node_cpu_seconds_total{cpu="0"}`             |
+| `!=`     | Non-equality                              | `node_cpu_seconds_total{cpu!="0"}`            |
 | `=~`     | Regex match                               | `node_cpu_seconds_total{mode=~"user|system"}` |
 | `!~`     | Negative regex match                      | `node_cpu_seconds_total{mode!~"idle|iowait"}` |
 
