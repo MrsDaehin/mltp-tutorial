@@ -103,7 +103,7 @@ http_request_duration_seconds_count 105
 ```
 ## When to Use Each Metric Type
 
-Choosing the right metric type is essential for effective monitoring and querying in Prometheus. Here’s a practical guide:
+Choosing the right metric type is essential for effective monitoring and querying in Prometheus. Here's a practical guide:
 
 ---
 
@@ -243,12 +243,12 @@ Use value filtering to focus on series that are above or below thresholds, or to
 
 PromQL provides several label matchers for more advanced filtering:
 
-| Operator | Description                               | Example                                       |
-| :------- | :---------------------------------------- | :-------------------------------------------- |
-| `=`      | Equality                                  | `node_cpu_seconds_total{cpu="0"}`             |
-| `!=`     | Non-equality                              | `node_cpu_seconds_total{cpu!="0"}`            |
-| `=~`     | Regex match                               | `node_cpu_seconds_total{mode=~"user|system"}` |
-| `!~`     | Negative regex match                      | `node_cpu_seconds_total{mode!~"idle|iowait"}` |
+| Operator | Description           | Example                                         |
+|:---------|:---------------------|:------------------------------------------------|
+| `=`      | Equality              | `node_cpu_seconds_total{cpu="0"}`               |
+| `!=`     | Non-equality          | `node_cpu_seconds_total{cpu!="0"}`              |
+| `=~`     | Regex match           | `node_cpu_seconds_total{mode=~"user|system"}`   |
+| `!~`     | Negative regex match  | `node_cpu_seconds_total{mode!~"idle|iowait"}`   |
 
   * **Example with complex label matchers:**
     ```promql
